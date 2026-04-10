@@ -53,10 +53,10 @@ class CodeSeeder extends Seeder
             ['group_key' => 'SCHEDULE_TYPE', 'code_key' => 'ETC',         'name' => '기타',       'sort' => 5],
 
             // 휴가 유형
-            ['group_key' => 'LEAVE_TYPE', 'code_key' => 'ANNUAL',    'name' => '연차',   'sort' => 1],
+            ['group_key' => 'LEAVE_TYPE', 'code_key' => 'ANNUAL',    'name' => '연차',    'sort' => 1],
             ['group_key' => 'LEAVE_TYPE', 'code_key' => 'HALF_AM',   'name' => '오전반차', 'sort' => 2],
             ['group_key' => 'LEAVE_TYPE', 'code_key' => 'HALF_PM',   'name' => '오후반차', 'sort' => 3],
-            ['group_key' => 'LEAVE_TYPE', 'code_key' => 'SICK',      'name' => '병가',   'sort' => 4],
+            ['group_key' => 'LEAVE_TYPE', 'code_key' => 'SICK',      'name' => '병가',    'sort' => 4],
             ['group_key' => 'LEAVE_TYPE', 'code_key' => 'SPECIAL',   'name' => '특별휴가', 'sort' => 5],
 
             // 휴가 신청 상태
