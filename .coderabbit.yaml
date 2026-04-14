@@ -1,0 +1,6 @@
+reviews:
+  profile: assertive
+  auto_review: true
+
+chat:
+  auto_reply: true

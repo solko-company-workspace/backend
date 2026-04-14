@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CompanyMemberController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -33,4 +34,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/companies', [CompanyController::class, 'store']);
     Route::patch('/companies/{id}', [CompanyController::class, 'update']);
     Route::patch('/companies/{id}/toggle', [CompanyController::class, 'toggle']);
+
+    Route::get('/company-members', [CompanyMemberController::class, 'index']);
+    Route::post('/company-members', [CompanyMemberController::class, 'store']);
+    Route::patch('/company-members/{id}', [CompanyMemberController::class, 'update']);
+    Route::delete('/company-members/{id}', [CompanyMemberController::class, 'delete']);
 });
