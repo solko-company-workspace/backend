@@ -6,6 +6,7 @@ use App\Constants\Message;
 use App\Models\CompanyMember;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CompanyMemberController extends Controller
 {
@@ -58,15 +59,7 @@ class CompanyMemberController extends Controller
             'leave_date' => 'nullable|date|after_or_equal:join_date',
         ]);
 
-        $exists = CompanyMember::where('company_id', $request->company_id)
-            ->where('user_id', $request->user_id)
-            ->exists();
-
-        if ($exists) {
-            return $this->failure(message: Message::DUPLICATE, status: 409);
-        }
-
-        $member = CompanyMember::create([
+        $data = [
             'company_id' => $request->company_id,
             'user_id' => $request->user_id,
             'department_id' => $request->department_id,
@@ -76,7 +69,32 @@ class CompanyMemberController extends Controller
             'memo' => $request->memo,
             'join_date' => $request->join_date,
             'leave_date' => $request->leave_date,
-        ]);
+        ];
+
+        $member = DB::transaction(function () use ($data) {
+            $existing = CompanyMember::withTrashed()
+                ->where('company_id', $data['company_id'])
+                ->where('user_id', $data['user_id'])
+                ->lockForUpdate()
+                ->first();
+
+            if ($existing?->trashed()) {
+                $existing->restore();
+                $existing->update($data);
+
+                return $existing;
+            }
+
+            if ($existing) {
+                return null; // 중복
+            }
+
+            return CompanyMember::create($data);
+        });
+
+        if ($member === null) {
+            return $this->failure(message: Message::DUPLICATE, status: 409);
+        }
 
         return $this->success(data: $member, status: 201);
     }
