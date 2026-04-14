@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Constants\AdminMessage;
 use App\Constants\Message;
 use App\Http\Controllers\Controller;
 use App\Models\Company;

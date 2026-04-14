@@ -26,7 +26,11 @@ return new class extends Migration
                 ->nullable()
                 ->constrained('codes', 'code_id')
                 ->comment('직급 | codes.group_key=POSITION');
-            $table->foreignId('role_id')->nullable()->constrained('roles', 'role_id')->nullOnDelete()->comment('개별 권한 role | null이면 member_type 기본 role 사용');
+            $table->foreignId('role_id')
+                ->nullable()
+                ->constrained('roles', 'role_id')
+                ->nullOnDelete()
+                ->comment('개별 권한 role | null이면 member_type 기본 role 사용');
             $table->boolean('is_primary')->default(false)->comment('대표회사 여부 (1:대표, 0:일반)');
             $table->text('memo')->nullable()->comment('메모');
             $table->dateTime('join_date')->nullable()->comment('입사일자');

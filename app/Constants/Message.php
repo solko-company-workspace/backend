@@ -9,4 +9,5 @@ class Message
     const DELETED     = '삭제되었습니다.';
     const ACTIVATED   = '활성화 되었습니다.';
     const DEACTIVATED = '비활성화 되었습니다.';
+    const DUPLICATE   = '이미 등록된 데이터입니다.';
 }
