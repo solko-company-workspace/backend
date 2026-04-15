@@ -6,6 +6,7 @@ use App\Constants\AdminMessage;
 use App\Constants\Message;
 use App\Http\Controllers\Controller;
 use App\Models\Code;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -53,19 +54,30 @@ class CodeController extends Controller
             'is_active' => true,
         ];
 
-        $code = DB::Transaction(function () use ($data) {
-            $existing = Code::query()
-                ->where('group_key', $data['group_key'])
-                ->where('code_key', $data['code_key'])
-                ->lockForUpdate()
-                ->first();
+        $code = '';
 
-            if ($existing) {
-                return null; // 중복
+        try {
+            $code = DB::Transaction(function () use ($data) {
+                $existing = Code::query()
+                    ->where('group_key', $data['group_key'])
+                    ->where('code_key', $data['code_key'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($existing) {
+                    return null; // 중복
+                }
+
+                return Code::create($data);
+            });
+        } catch (QueryException $e) {
+            if ($e->errorInfo[1] === 1062) {
+                return $this->failure(message: AdminMessage::CODE_ALREADY_EXISTS, status: 409);
+
             }
 
-            return Code::create($data);
-        });
+            throw $e;
+        }
 
         if ($code === null) {
             return $this->failure(message: AdminMessage::CODE_ALREADY_EXISTS, status: 409);

@@ -9,10 +9,32 @@ class AreaSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('areas')->truncate();
+        $rows = $this->parseCsv(storage_path('app/import/korea_legal_district_codes_20250807.csv'));
+        [$sidoRows, $sigunguRows] = $this->classifyRows($rows);
 
-        $path = storage_path('app/import/korea_legal_district_codes_20250807.csv');
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::transaction(function () use ($sidoRows, $sigunguRows) {
+            DB::table('areas')->delete();
+            $this->persistAreas($sidoRows, $sigunguRows);
+        });
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+    }
+
+    private function parseCsv(string $path): array
+    {
+        if (! file_exists($path)) {
+            $this->command->error("파일 없음: {$path}");
+
+            return [];
+        }
+
         $file = fopen($path, 'r');
+
+        if ($file === false) {
+            $this->command->error("파일 열기 실패: {$path}");
+
+            return [];
+        }
 
         // BOM 제거
         $bom = fread($file, 3);
@@ -23,38 +45,47 @@ class AreaSeeder extends Seeder
         // 헤더 skip
         fgetcsv($file);
 
-        $sidoMap = [];    // 시도명 => area_id
+        $rows = [];
+        while (($row = fgetcsv($file)) !== false) {
+            $rows[] = $row;
+        }
+
+        fclose($file);
+
+        return $rows;
+    }
+
+    private function classifyRows(array $rows): array
+    {
         $sidoRows = [];
         $sigunguRows = [];
 
-        while (($row = fgetcsv($file)) !== false) {
-            [, $sido, $sigungu, $eupmyeondong, , $sort, , $deletedAt] = array_pad($row, 8, '');
+        foreach ($rows as $row) {
+            [$code, $sido, $sigungu, $eupmyeondong, , , , $deletedAt] = array_pad($row, 9, '');
 
             // 삭제된 코드 제외
-            if (!empty($deletedAt)) {
+            if (! empty($deletedAt)) {
                 continue;
             }
 
             // 시도만 (시군구명 없음)
             if (empty($sigungu)) {
                 $sidoRows[$sido] = [
-                    'name'      => $sido,
+                    'district_code' => $code,
+                    'name' => $sido,
                     'parent_id' => null,
-                    'depth'     => 1,
-                    'sort'      => (int) $sort,
+                    'depth' => 1,
                     'is_active' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ];
-            }
-
-            // 시군구만 (시군구명 있고 읍면동명 없음)
-            if (!empty($sigungu) && empty($eupmyeondong)) {
+                // 시군구만 (시군구명 있고 읍면동명 없음)
+            } elseif (empty($eupmyeondong)) {
                 $sigunguRows[] = [
-                    'sido'      => $sido,
-                    'name'      => $sigungu,
-                    'depth'     => 2,
-                    'sort'      => (int) $sort,
+                    'sido' => $sido,
+                    'district_code' => $code,
+                    'name' => $sigungu,
+                    'depth' => 2,
                     'is_active' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -62,12 +93,15 @@ class AreaSeeder extends Seeder
             }
         }
 
-        fclose($file);
+        return [$sidoRows, $sigunguRows];
+    }
 
+    private function persistAreas(array $sidoRows, array $sigunguRows): void
+    {
         // 시도 insert
+        $sidoMap = [];
         foreach ($sidoRows as $sido => $data) {
-            $id = DB::table('areas')->insertGetId($data);
-            $sidoMap[$sido] = $id;
+            $sidoMap[$sido] = DB::table('areas')->insertGetId($data);
         }
 
         // 시군구 insert (chunk)
@@ -75,7 +109,14 @@ class AreaSeeder extends Seeder
         foreach ($sigunguRows as $row) {
             $sido = $row['sido'];
             unset($row['sido']);
-            $row['parent_id'] = $sidoMap[$sido] ?? null;
+
+            if (! isset($sidoMap[$sido])) {
+                $this->command->error("시도를 찾을 수 없습니다: {$sido}");
+
+                return;
+            }
+
+            $row['parent_id'] = $sidoMap[$sido];
             $insert[] = $row;
 
             if (count($insert) >= 500) {
@@ -84,7 +125,7 @@ class AreaSeeder extends Seeder
             }
         }
 
-        if (!empty($insert)) {
+        if (! empty($insert)) {
             DB::table('areas')->insert($insert);
         }
     }
