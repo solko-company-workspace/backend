@@ -13,11 +13,15 @@ class AreaSeeder extends Seeder
         [$sidoRows, $sigunguRows] = $this->classifyRows($rows);
 
         DB::statement('SET FOREIGN_KEY_CHECKS=0');
-        DB::transaction(function () use ($sidoRows, $sigunguRows) {
-            DB::table('areas')->delete();
-            $this->persistAreas($sidoRows, $sigunguRows);
-        });
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        try {
+            DB::transaction(function () use ($sidoRows, $sigunguRows) {
+                DB::table('areas')->delete();
+                DB::statement('ALTER TABLE areas AUTO_INCREMENT = 1');
+                $this->persistAreas($sidoRows, $sigunguRows);
+            });
+        } finally {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        }
     }
 
     private function parseCsv(string $path): array
@@ -111,9 +115,7 @@ class AreaSeeder extends Seeder
             unset($row['sido']);
 
             if (! isset($sidoMap[$sido])) {
-                $this->command->error("시도를 찾을 수 없습니다: {$sido}");
-
-                return;
+                throw new \RuntimeException("시도를 찾을 수 없습니다: {$sido}");
             }
 
             $row['parent_id'] = $sidoMap[$sido];

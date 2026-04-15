@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('group_key', 50)->comment('코드 그룹');
             $table->string('code_key', 50)->comment('코드 키');
             $table->string('name', 100)->comment('표시 이름');
-            $table->text('description')->comment('코드 설명');
+            $table->text('description')->nullable()->comment('코드 설명');
             $table->boolean('is_active')->default(true)->comment('코드 사용 여부');
             $table->timestamps();
             $table->unique(['group_key', 'code_key'], 'uq_codes_group_code');
