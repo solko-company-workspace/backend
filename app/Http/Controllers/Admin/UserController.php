@@ -33,15 +33,15 @@ class UserController extends Controller
     // 승인
     public function approve(Request $request, int $id): JsonResponse
     {
-        $user = User::findOrFail($id);
-
-        if ($user->is_approved) {
-            return $this->failure(message: AdminMessage::USER_ALREADY_APPROVED, status: 409);
-        }
-
         $statusId = Code::getId('USER_APPROVAL_STATUS', 'APPROVED');
 
-        DB::transaction(function () use ($user, $request, $statusId) {
+        $done = DB::transaction(function () use ($id, $request, $statusId) {
+            $user = User::where('user_id', $id)->lockForUpdate()->firstOrFail();
+
+            if ($user->is_approved) {
+                return false;
+            }
+
             $user->update(['is_approved' => true]);
 
             DB::table('user_approval_logs')->insert([
@@ -51,7 +51,13 @@ class UserController extends Controller
                 'reason'       => null,
                 'created_at'   => now(),
             ]);
+
+            return true;
         });
+
+        if (! $done) {
+            return $this->failure(message: AdminMessage::USER_ALREADY_APPROVED, status: 409);
+        }
 
         return $this->success(message: AdminMessage::USER_APPROVE_SUCCESS);
     }
@@ -63,15 +69,15 @@ class UserController extends Controller
             'reason' => 'nullable|string|max:500',
         ]);
 
-        $user = User::findOrFail($id);
-
-        if ($user->is_approved) {
-            return $this->failure(message: AdminMessage::USER_ALREADY_APPROVED, status: 409);
-        }
-
         $statusId = Code::getId('USER_APPROVAL_STATUS', 'REJECTED');
 
-        DB::transaction(function () use ($user, $request, $statusId) {
+        $done = DB::transaction(function () use ($id, $request, $statusId) {
+            $user = User::where('user_id', $id)->lockForUpdate()->firstOrFail();
+
+            if ($user->is_approved) {
+                return false;
+            }
+
             DB::table('user_approval_logs')->insert([
                 'user_id'      => $user->user_id,
                 'processed_by' => $request->user()->user_id,
@@ -79,7 +85,13 @@ class UserController extends Controller
                 'reason'       => $request->reason,
                 'created_at'   => now(),
             ]);
+
+            return true;
         });
+
+        if (! $done) {
+            return $this->failure(message: AdminMessage::USER_ALREADY_APPROVED, status: 409);
+        }
 
         return $this->success(message: AdminMessage::USER_REJECT_SUCCESS);
     }

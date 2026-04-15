@@ -80,7 +80,6 @@ class CompanyMemberController extends Controller
 
             if ($existing?->trashed()) {
                 $existing->restore();
-                $existing->update($data);
 
                 return $existing;
             }
