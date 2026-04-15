@@ -1,8 +1,0 @@
-reviews:
-    language: 'ko'
-    profile: assertive
-+  auto_review:
-+    enabled: true
-
-chat:
-    auto_reply: true

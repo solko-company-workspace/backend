@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::create('areas', function (Blueprint $table) {
             $table->id('area_id');
+            $table->string('district_code', 10)->unique()->comment('법정동코드');
             $table->string('name', 100)->comment('지역명 | ex) 서울특별시, 강남구');
             $table->foreignId('parent_id')
                 ->nullable()
@@ -17,7 +18,6 @@ return new class extends Migration
                 ->nullOnDelete()
                 ->comment('상위 지역 ID | null이면 시도(최상위)');
             $table->unsignedTinyInteger('depth')->default(1)->comment('계층 깊이 | 1:시도 2:시군구');
-            $table->unsignedTinyInteger('sort')->default(0)->comment('정렬 순서');
             $table->boolean('is_active')->default(true)->comment('사용 여부');
             $table->timestamps();
         });

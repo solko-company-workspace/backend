@@ -37,8 +37,6 @@ class IndustryCodeMappingSeeder extends Seeder
         $bom = "\xEF\xBB\xBF";
         $header[0] = ltrim($header[0], $bom);
 
-        DB::table('industry_code_mappings')->truncate();
-
         $chunk = [];
         $now = now();
         $count = 0;
@@ -81,20 +79,19 @@ class IndustryCodeMappingSeeder extends Seeder
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
-
-            if (count($chunk) === 500) {
-                DB::table('industry_code_mappings')->insert($chunk);
-                $count += count($chunk);
-                $chunk = [];
-            }
-        }
-
-        if (! empty($chunk)) {
-            DB::table('industry_code_mappings')->insert($chunk);
-            $count += count($chunk);
         }
 
         fclose($file);
+
+        DB::transaction(function () use ($chunk, &$count) {
+            DB::table('industry_code_mappings')->delete();
+            DB::statement('ALTER TABLE industry_code_mappings AUTO_INCREMENT = 1');
+
+            foreach (array_chunk($chunk, 500) as $batch) {
+                DB::table('industry_code_mappings')->insert($batch);
+                $count += count($batch);
+            }
+        });
 
         $this->command->info("완료: {$count}건 삽입");
     }

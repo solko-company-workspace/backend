@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Constants\Message;
 use App\Models\CompanyMember;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -71,26 +72,34 @@ class CompanyMemberController extends Controller
             'leave_date' => $request->leave_date,
         ];
 
-        $member = DB::transaction(function () use ($data) {
-            $existing = CompanyMember::withTrashed()
-                ->where('company_id', $data['company_id'])
-                ->where('user_id', $data['user_id'])
-                ->lockForUpdate()
-                ->first();
+        $member = '';
 
-            if ($existing?->trashed()) {
-                $existing->restore();
-                $existing->update($data);
+        try {
+            $member = DB::transaction(function () use ($data) {
+                $existing = CompanyMember::withTrashed()
+                    ->where('company_id', $data['company_id'])
+                    ->where('user_id', $data['user_id'])
+                    ->lockForUpdate()
+                    ->first();
 
-                return $existing;
+                if ($existing?->trashed()) {
+                    $existing->restore();
+
+                    return $existing;
+                }
+
+                if ($existing) {
+                    return null; // 중복
+                }
+
+                return CompanyMember::create($data);
+            });
+        } catch (QueryException $e) {
+            if ($e->errorInfo[1] === 1062) {
+                return $this->failure(message: Message::DUPLICATE, status: 409);
             }
-
-            if ($existing) {
-                return null; // 중복
-            }
-
-            return CompanyMember::create($data);
-        });
+            throw $e;
+        }
 
         if ($member === null) {
             return $this->failure(message: Message::DUPLICATE, status: 409);

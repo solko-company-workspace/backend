@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             CodeSeeder::class,
             TenantSetupSeeder::class,
             IndustryCodeMappingSeeder::class,
+            AreaSeeder::class,
         ]);
     }
 }
